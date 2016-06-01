@@ -20,26 +20,19 @@
           <p class="extra_content"></p>
         </div>
 
-          <form method="post" action="{% url "layer-deney" resource.id %}">
-          {% csrf_token %}
-              <div class="form-group">
-                <label >{% trans "Comment subject" %}</label>
-                  <select class="form-control" name="comment-subject" >
-                    {% for subject in deney_comment_subjects %}
-                        <option value="{{ subject }}">{{ subject }}</option>
-                    {% empty %}
-                        <option value="">No Subject</option>
-                    {% endfor %}
-                  </select>
-              </div>
-              Please comment here:
-              <br>
-              <textarea name="comment"></textarea>
-          <div class="modal-footer">
+          <form action="{% url "layer-deney" resource.id %}" method="post">
+            {% csrf_token %}
+              {% for field in deny_form %}
+            <div class="fieldWrapper">
+            {{ field.errors }}
+            {{ field.label_tag }} {{ field }}
+
+            </div>
+            {% endfor %}
+            <div class="modal-footer">
               <button class="btn btn-default" data-dismiss="modal">{% trans "Cancel" %}</button>
           <button type="submit" class="btn btn-primary" >{% trans "Yes" %}</button>
           </div>
-
           </form>
 
       </div>

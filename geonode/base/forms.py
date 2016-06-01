@@ -169,3 +169,27 @@ class ResourceBaseForm(TranslationModelForm):
             'rating',
             'detail_url'
             )
+
+def comment_subjects(comment_type):
+    if comment_type == 'approve':
+        subjects_file = open("geonode/approve_comment_subjects.txt", "r")
+    elif comment_type == 'deney':
+        subjects_file = open("geonode/deny_comment_subject.txt", "r")
+
+    approve_comment_subjects = [line for line in subjects_file]
+    iter_list = []
+    for subject in approve_comment_subjects:
+        subject_tuple = (subject, subject)
+        iter_list.append(subject_tuple)
+    return iter_list
+
+
+
+class ResourceApproveForm(forms.Form):
+    comment_subject = forms.ChoiceField(required=True, choices=comment_subjects('approve'))
+    comment = forms.CharField(max_length=500, required=True, widget=forms.Textarea)
+
+
+class ResourceDenyForm(forms.Form):
+    comment_subject = forms.ChoiceField(required=True, choices=comment_subjects('deney'))
+    comment = forms.CharField(max_length=500, required=True, widget=forms.Textarea)

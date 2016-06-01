@@ -47,6 +47,7 @@ from django.forms.util import ErrorList
 from geonode.tasks.deletion import delete_layer
 from geonode.services.models import Service
 from geonode.layers.forms import LayerForm, LayerUploadForm, NewLayerUploadForm, LayerAttributeForm
+from geonode.base.forms import ResourceApproveForm, ResourceDenyForm
 from geonode.base.forms import CategoryForm
 from geonode.layers.models import Layer, Attribute, UploadSession
 from geonode.base.enumerations import CHARSETS
@@ -325,10 +326,8 @@ def layer_detail(request, layername, template='layers/layer_detail.html'):
         except:
             granules = {"features": []}
             all_granules = {"features": []}
-    approve_subjects_file = open("geonode/approve_comment_subjects.txt", "r")
-    approve_comment_subjects = [line for line in approve_subjects_file ]
-    deney_subjects_file = open("geonode/deny_comment_subject.txt", "r")
-    deney_comment_subjects = [line for line in deney_subjects_file ]
+    approve_form = ResourceApproveForm
+    deny_form = ResourceDenyForm
     context_dict = {
         "resource": layer,
         'perms_list': get_perms(request.user, layer.get_self_resource()),
@@ -341,10 +340,10 @@ def layer_detail(request, layername, template='layers/layer_detail.html'):
         "all_granules": all_granules,
         "filter": filter,
         "user_role": user_role,
-        "deney_comment_subjects":deney_comment_subjects,
-        "approve_comment_subjects": approve_comment_subjects,
         "denied_comments": LayerAuditActivity.objects.filter(layer_submission_activity__layer=layer),
-        "status": layer.status
+        "status": layer.status,
+        "approve_form": approve_form,
+        "deny_form": deny_form,
     }
 
     context_dict["viewer"] = json.dumps(
@@ -731,67 +730,81 @@ def layer_publish(request, layer_pk):
 @login_required
 def layer_approve(request, layer_pk):
     if request.method == 'POST':
-        try:
-            layer = Layer.objects.get(id=layer_pk)
-        except Layer.DoesNotExist:
-            return HttpResponse("requested layer does not exists")
+        form = ResourceApproveForm(request.POST)
+        if form.is_valid():
+
+            try:
+                layer = Layer.objects.get(id=layer_pk)
+            except Layer.DoesNotExist:
+                return HttpResponse("requested layer does not exists")
+            else:
+                group = layer.group
+                if request.user not in group.get_managers():
+                    return HttpResponse("you are not allowed to approve this layer")
+                layer_submission_activity = LayerSubmissionActivity.objects.get(layer=layer, group=group, iteration=layer.current_iteration)
+                layer_audit_activity = LayerAuditActivity(layer_submission_activity=layer_submission_activity)
+                comment_body = request.POST.get('comment')
+                comment_subject = request.POST.get('comment-subject')
+                layer.status = 'ACTIVE'
+                layer.last_auditor = request.user
+                layer.save()
+
+                layer_submission_activity.is_audited = True
+                layer_submission_activity.save()
+
+                layer_audit_activity.comment_subject = comment_subject
+                layer_audit_activity.comment_body = comment_body
+                layer_audit_activity.result = 'APPROVED'
+                layer_audit_activity.auditor = request.user
+                layer_audit_activity.save()
+
+            messages.info(request, 'approved layer succesfully')
+            return HttpResponseRedirect(reverse('admin-workspace-layer'))
         else:
-            group = layer.group
-            if request.user not in group.get_managers():
-                return HttpResponse("you are not allowed to approve this layer")
-            layer_submission_activity = LayerSubmissionActivity.objects.get(layer=layer, group=group, iteration=layer.current_iteration)
-            layer_audit_activity = LayerAuditActivity(layer_submission_activity=layer_submission_activity)
-            comment_body = request.POST.get('comment')
-            comment_subject = request.POST.get('comment-subject')
-            layer.status = 'ACTIVE'
-            layer.last_auditor = request.user
-            layer.save()
+            messages.info(request, 'Please write an approve comment and try again')
+            return HttpResponseRedirect(reverse('admin-workspace-layer'))
 
-            layer_submission_activity.is_audited = True
-            layer_submission_activity.save()
 
-            layer_audit_activity.comment_subject = comment_subject
-            layer_audit_activity.comment_body = comment_body
-            layer_audit_activity.result = 'APPROVED'
-            layer_audit_activity.auditor = request.user
-            layer_audit_activity.save()
-
-        messages.info(request, 'approved layer succesfully')
-        return HttpResponseRedirect(reverse('admin-workspace-layer'))
     else:
-        return HttpResponseRedirect(reverse('admin-workspace-layer'))\
+        return HttpResponseRedirect(reverse('admin-workspace-layer'))
 
 
 @login_required
 def layer_deney(request, layer_pk):
     if request.method == 'POST':
-        try:
-            layer = Layer.objects.get(id=layer_pk)
-        except:
-            return HttpResponse("requested layer does not exists")
+        form = ResourceApproveForm(request.POST)
+        if form.is_valid():
+
+            try:
+                layer = Layer.objects.get(id=layer_pk)
+            except:
+                return HttpResponse("requested layer does not exists")
+            else:
+                group = layer.group
+                if request.user not in group.get_managers():
+                    return HttpResponse("you are not allowed to deney this layer")
+                layer_submission_activity = LayerSubmissionActivity.objects.get(layer=layer, group=group, iteration=layer.current_iteration)
+                layer_audit_activity= LayerAuditActivity(layer_submission_activity=layer_submission_activity)
+                comment_body = request.POST.get('comment')
+                comment_subject = request.POST.get('comment-subject')
+                layer.status = 'DENIED'
+                layer.last_auditor = request.user
+                layer.save()
+
+                layer_submission_activity.is_audited = True
+                layer_submission_activity.save()
+
+                layer_audit_activity.comment_subject = comment_subject
+                layer_audit_activity.comment_body = comment_body
+                layer_audit_activity.result = 'DECLINED'
+                layer_audit_activity.auditor = request.user
+                layer_audit_activity.save()
+
+            messages.info(request, 'layer denied successfully')
+            return HttpResponseRedirect(reverse('admin-workspace-layer'))
         else:
-            group = layer.group
-            if request.user not in group.get_managers():
-                return HttpResponse("you are not allowed to deney this layer")
-            layer_submission_activity = LayerSubmissionActivity.objects.get(layer=layer, group=group, iteration=layer.current_iteration)
-            layer_audit_activity= LayerAuditActivity(layer_submission_activity=layer_submission_activity)
-            comment_body = request.POST.get('comment')
-            comment_subject = request.POST.get('comment-subject')
-            layer.status = 'DENIED'
-            layer.last_auditor = request.user
-            layer.save()
-
-            layer_submission_activity.is_audited = True
-            layer_submission_activity.save()
-
-            layer_audit_activity.comment_subject = comment_subject
-            layer_audit_activity.comment_body = comment_body
-            layer_audit_activity.result = 'DECLINED'
-            layer_audit_activity.auditor = request.user
-            layer_audit_activity.save()
-
-        messages.info(request, 'layer denied successfully')
-        return HttpResponseRedirect(reverse('admin-workspace-layer'))
+            messages.info(request, 'Please write a deny comment and try again')
+            return HttpResponseRedirect(reverse('admin-workspace-layer'))
     else:
         return HttpResponseRedirect(reverse('admin-workspace-layer'))
 

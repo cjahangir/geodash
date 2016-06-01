@@ -24,28 +24,21 @@
           <p class="extra_content"></p>
         </div>
 
-          <form method="post" action="{% url "document-approve" resource.id %}">
-          {% csrf_token %}
 
-              <div class="form-group">
-                <label >{% trans "Comment subject" %}</label>
-                  <select class="form-control" name="comment-subject" >
-                    {% for subject in approve_comment_subjects %}
-                        <option value="{{ subject }}">{{ subject }}</option>
-                    {% empty %}
-                        <option value="">No Subject</option>
-                    {% endfor %}
-                  </select>
-              </div>
+          </form>
+          <form action="{% url "document-approve" resource.id %}" method="post">
+            {% csrf_token %}
+              {% for field in approve_form %}
+            <div class="fieldWrapper">
+            {{ field.errors }}
+            {{ field.label_tag }} {{ field }}
 
-              Please comment here:
-              <br>
-              <textarea name="comment"></textarea>
-          <div class="modal-footer">
+            </div>
+            {% endfor %}
+            <div class="modal-footer">
               <button class="btn btn-default" data-dismiss="modal">{% trans "Cancel" %}</button>
           <button type="submit" class="btn btn-primary" >{% trans "Yes" %}</button>
           </div>
-
           </form>
 
       </div>

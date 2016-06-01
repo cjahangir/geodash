@@ -47,6 +47,7 @@ from geonode.documents.models import IMGTYPES
 from geonode.utils import build_social_links
 from geonode.documents.models import DocumentSubmissionActivity, DocumentAuditActivity
 from geonode.groups.models import GroupProfile
+from geonode.base.forms import ResourceApproveForm, ResourceDenyForm
 
 ALLOWED_DOC_TYPES = settings.ALLOWED_DOCUMENT_TYPES
 
@@ -119,11 +120,8 @@ def document_detail(request, docid):
 
         metadata = document.link_set.metadata().filter(
             name__in=settings.DOWNLOAD_FORMATS_METADATA)
-        approve_subjects_file = open("geonode/approve_comment_subjects.txt", "r")
-        approve_comment_subjects = [line for line in approve_subjects_file ]
-        deny_subjects_file = open("geonode/deny_comment_subject.txt", "r")
-        deny_comment_subjects = [line for line in deny_subjects_file ]
-
+        approve_form = ResourceApproveForm
+        deny_form = ResourceDenyForm
         context_dict = {
             'perms_list': get_perms(request.user, document.get_self_resource()),
             'permissions_json': _perms_info_json(document),
@@ -133,9 +131,10 @@ def document_detail(request, docid):
             'related': related,
             "user_role": user_role,
             "status": document.status,
-            "approve_comment_subjects": approve_comment_subjects,
             "denied_comments": DocumentAuditActivity.objects.filter(document_submission_activity__document=document),
-            "deny_comment_subjects":deny_comment_subjects}
+            "approve_form": approve_form,
+            "deny_form": deny_form,
+        }
 
         if settings.SOCIAL_ORIGINS:
             context_dict["social_links"] = build_social_links(request, document)
