@@ -173,10 +173,10 @@ class ResourceBaseForm(TranslationModelForm):
 def comment_subjects(comment_type):
     if comment_type == 'approve':
         subjects_file = open("geonode/approve_comment_subjects.txt", "r")
-    elif comment_type == 'deney':
-        subjects_file = open("geonode/deny_comment_subject.txt", "r")
+    elif comment_type == 'deny':
+        subjects_file = open("geonode/deny_comment_subjects.txt", "r")
 
-    approve_comment_subjects = [line for line in subjects_file]
+    approve_comment_subjects = [line.rstrip('\n') for line in subjects_file]
     iter_list = []
     for subject in approve_comment_subjects:
         subject_tuple = (subject, subject)
@@ -191,5 +191,5 @@ class ResourceApproveForm(forms.Form):
 
 
 class ResourceDenyForm(forms.Form):
-    comment_subject = forms.ChoiceField(required=True, choices=comment_subjects('deney'))
+    comment_subject = forms.ChoiceField(required=True, choices=comment_subjects('deny'))
     comment = forms.CharField(max_length=500, required=True, widget=forms.Textarea)

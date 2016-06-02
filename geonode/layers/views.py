@@ -744,7 +744,7 @@ def layer_approve(request, layer_pk):
                 layer_submission_activity = LayerSubmissionActivity.objects.get(layer=layer, group=group, iteration=layer.current_iteration)
                 layer_audit_activity = LayerAuditActivity(layer_submission_activity=layer_submission_activity)
                 comment_body = request.POST.get('comment')
-                comment_subject = request.POST.get('comment-subject')
+                comment_subject = request.POST.get('comment_subject')
                 layer.status = 'ACTIVE'
                 layer.last_auditor = request.user
                 layer.save()
@@ -772,7 +772,9 @@ def layer_approve(request, layer_pk):
 @login_required
 def layer_deney(request, layer_pk):
     if request.method == 'POST':
-        form = ResourceApproveForm(request.POST)
+
+
+        form = ResourceDenyForm(data=request.POST)
         if form.is_valid():
 
             try:
@@ -784,9 +786,9 @@ def layer_deney(request, layer_pk):
                 if request.user not in group.get_managers():
                     return HttpResponse("you are not allowed to deney this layer")
                 layer_submission_activity = LayerSubmissionActivity.objects.get(layer=layer, group=group, iteration=layer.current_iteration)
-                layer_audit_activity= LayerAuditActivity(layer_submission_activity=layer_submission_activity)
+                layer_audit_activity = LayerAuditActivity(layer_submission_activity=layer_submission_activity)
                 comment_body = request.POST.get('comment')
-                comment_subject = request.POST.get('comment-subject')
+                comment_subject = request.POST.get('comment_subject')
                 layer.status = 'DENIED'
                 layer.last_auditor = request.user
                 layer.save()
